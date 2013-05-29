@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Printator.  If not, see <http://www.gnu.org/licenses/>.
 
-from printrun import gcoder
-from printrun import gcview
-from printrun.libtatlin import actors
+from Printrun.printrun import gcoder
+from Printrun.printrun import gcview
+from Printrun.printrun.libtatlin import actors
 
 import sys
 import os
