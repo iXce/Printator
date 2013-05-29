@@ -73,7 +73,7 @@ class PrinterSimulator(object):
     xy_homing_feedrate = 50.
     z_homing_feedrate = 4.
 
-    def __init__(self, path, port, gline_cb = None, debug = False):
+    def __init__(self, path, port, gline_cb = None, debug = False, server = None):
         self.path = path
         self.port = port
         self.stop_threads = False
@@ -82,6 +82,7 @@ class PrinterSimulator(object):
         self.gcoder = None
         self.gline_cb = None
         self.debug = debug
+        self.server = server
         self.command_buffer = Queue(20 if not fast_mode else 400)
         self.glframe = None
 
@@ -208,11 +209,28 @@ class PrinterSimulator(object):
     def write(self, data):
         if self.debug: print ">>>", data
         self.port.write(data + "\n")
+        self.port.flush()
 
     def reader(self):
         print "Simulator listening on %s" % self.path
         while not self.stop_threads:
-            line = self.port.readline().strip()
+            if not self.port and self.server:
+                try:
+                    self.conn, self.remote_addr = self.server.accept()
+                    print "TCP connection from %s:%s" % self.remote_addr
+                    self.conn.settimeout(com_timeout)
+                    self.port = self.conn.makefile()
+                except socket.timeout:
+                    continue
+            try:
+                line = self.port.readline()
+            except socket.timeout:
+                continue
+            if self.server and not line: # empty line returned from the socket: this is EOF
+                print "Lost connection from %s:%s" % self.remote_addr
+                self.port = None
+                continue
+            line = line.strip()
             if not line:
                 continue
             if self.debug: print "<<<", line
@@ -266,8 +284,11 @@ if use_serial:
     simulator = PrinterSimulator(pubend, sport, debug = debug_mode)
 else:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((socket_host, socket_port))
+    sock.settimeout(com_timeout)
     sock.listen(1)
+    simulator = PrinterSimulator("%s:%s" % (socket_host, socket_port), None, server = sock, debug = debug_mode)
 
 app = wx.App(redirect = False)
 frame = gcview.GcodeViewFrame(None, wx.ID_ANY, '3D printer simulator', size = (400, 400), build_dimensions = build_dimensions)
