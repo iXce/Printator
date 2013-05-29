@@ -38,6 +38,7 @@ from printrun import gcoder
 from printrun import gcview
 from printrun.libtatlin import actors
 
+com_timeout = 0.25
 serial_baudrate = 115200
 socket_host = "127.0.0.1"
 socket_port = 12421
@@ -46,6 +47,7 @@ build_dimensions = [200, 200, 100, 0, 0, 0, 0, 0, 0]
 parser = argparse.ArgumentParser(description = "3D printer simulator", add_help = False)
 parser.add_argument('--help', help = "Show this help message and quit", action = "store_true")
 parser.add_argument('-f', '--fast', help = "Process commands without reallistically waiting", action = "store_true")
+parser.add_argument('-d', '--debug', help = "Display debug messages", action = "store_true")
 parser.add_argument('-s', '--serial', help = "Simulator serial port")
 parser.add_argument('-n', '--network', help = "Use networking instead of serial communications", action = "store_true")
 parser.add_argument('-h', '--host', help = "Host to bind", default = str(socket_host))
@@ -55,6 +57,7 @@ if args.help:
     parser.print_help()
     raise SystemExit
 use_serial = not args.network
+debug_mode = args.debug
 fast_mode = args.fast
 serial_port = args.serial
 
@@ -259,8 +262,8 @@ if use_serial:
     socat_p = subprocess.Popen(["socat","PTY,link=%s" % privend, "PTY,link=%s" % pubend])
     while not os.path.exists(privend) or not os.path.exists(pubend):
         time.sleep(0.1)
-    sport = serial.Serial(privend, baudrate = serial_baudrate, timeout = 0.25)
-    simulator = PrinterSimulator(pubend, sport)
+    sport = serial.Serial(privend, baudrate = serial_baudrate, timeout = com_timeout)
+    simulator = PrinterSimulator(pubend, sport, debug = debug_mode)
 else:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((socket_host, socket_port))
