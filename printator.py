@@ -17,6 +17,7 @@
 
 from printrun import gcoder
 from printrun import gcview
+from printrun.libtatlin import actors
 
 import sys
 import os
@@ -44,6 +45,7 @@ build_dimensions = [200, 200, 100, 0, 0, 0, 0, 0, 0]
 
 parser = argparse.ArgumentParser(description = "3D printer simulator", add_help = False)
 parser.add_argument('--help', help = "Show this help message and quit", action = "store_true")
+parser.add_argument('-f', '--fast', help = "Process commands without reallistically waiting", action = "store_true")
 parser.add_argument('-s', '--serial', help = "Simulator serial port")
 parser.add_argument('-n', '--network', help = "Use networking instead of serial communications", action = "store_true")
 parser.add_argument('-h', '--host', help = "Host to bind", default = str(socket_host))
@@ -53,6 +55,7 @@ if args.help:
     parser.print_help()
     raise SystemExit
 use_serial = not args.network
+fast_mode = args.fast
 serial_port = args.serial
 
 class PrinterSimulator(object):
@@ -76,18 +79,21 @@ class PrinterSimulator(object):
         self.gcoder = None
         self.gline_cb = None
         self.debug = debug
-        self.command_buffer = Queue(20)
+        self.command_buffer = Queue(20 if not fast_mode else 400)
+        self.glframe = None
 
     def log(self, message):
         if self.debug: print "???", message
 
-    def start(self):
+    def start(self, frame):
+        self.gcoder = gcoder.GCode([])
+        self.glframe = frame
+        self.init_glmodel()
         self.stop_threads = False
         self.read_thread = threading.Thread(target = self.reader)
         self.read_thread.start()
         self.process_thread = threading.Thread(target = self.processor)
         self.process_thread.start()
-        self.gcoder = gcoder.GCode([])
 
     def stop(self):
         self.stop_threads = True
@@ -155,6 +161,7 @@ class PrinterSimulator(object):
 
             line_duration = self.compute_duration(new_x, new_y, new_z, new_f)
 
+            wx.CallAfter(self.add_glmove, gline, self.cur_x, self.cur_y, self.cur_z, new_x, new_y, new_z)
             self.cur_x = new_x
             self.cur_y = new_y
             self.cur_z = new_z
@@ -176,7 +183,7 @@ class PrinterSimulator(object):
             if gline.y: self.cur_y = gline.y
             if gline.z: self.cur_z = gline.z
             if gline.e: self.cur_e = gline.e
-        if line_duration and line_duration > 0:
+        if not fast_mode and line_duration and line_duration > 0:
             self.log("sleeping for %ss" % line_duration)
             time.sleep(line_duration)
         if self.gline_cb:
@@ -217,6 +224,32 @@ class PrinterSimulator(object):
                 self.command_buffer.put(gline)
                 self.write("ok")
 
+    def init_glmodel(self):
+        self.glmodel = actors.GcodeModel()
+        self.glmodel.load_data(self.gcoder)
+        self.glmodel.nvertices = 0
+        self.glmodel.layer_stops[-1] = self.glmodel.nvertices
+        self.glmodel.use_vbos = False
+        self.glmodel.loaded = True
+        self.glmodel.initialized = False
+        self.glframe.objects[-1].model = self.glmodel
+        self.refresh_timer = wx.CallLater(100, self.glframe.Refresh)
+
+    def add_glmove(self, gline, prev_x, prev_y, prev_z, cur_x, cur_y, cur_z):
+        if self.glmodel.nvertices + 2 > len(self.glmodel.vertices):
+            self.glmodel.colors.resize((2 * len(self.glmodel.vertices) + 2, 4))
+            self.glmodel.vertices.resize((2 * len(self.glmodel.vertices) + 2, 3))
+        self.glmodel.vertices[self.glmodel.nvertices] = (prev_x, prev_y, prev_z)
+        self.glmodel.vertices[self.glmodel.nvertices + 1] = (cur_x, cur_y, cur_z)
+        color = self.glmodel.movement_color(gline)
+        self.glmodel.colors[self.glmodel.nvertices] = color
+        self.glmodel.colors[self.glmodel.nvertices + 1] = color
+        self.glmodel.nvertices += 2
+        self.glmodel.layer_stops[-1] = self.glmodel.nvertices
+        self.glmodel.initialized = False
+        if not self.refresh_timer.IsRunning():
+            self.refresh_timer.Start()
+
 if use_serial:
     privend = tempfile.mktemp(prefix = "simpriv_", dir = os.getcwd())
     if serial_port:
@@ -233,11 +266,10 @@ else:
     sock.bind((socket_host, socket_port))
     sock.listen(1)
 
-simulator.start()
-
 app = wx.App(redirect = False)
 frame = gcview.GcodeViewFrame(None, wx.ID_ANY, '3D printer simulator', size = (400, 400), build_dimensions = build_dimensions)
 frame.Show(True)
+simulator.start(frame)
 app.MainLoop()
 app.Destroy()
 
