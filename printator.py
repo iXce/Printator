@@ -15,12 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Printator.  If not, see <http://www.gnu.org/licenses/>.
 
-from Printrun.printrun import gcoder
-from Printrun.printrun import gcview
-from Printrun.printrun.libtatlin import actors
-
 import sys
 import os
+import argparse
 import time
 import traceback
 import math
@@ -31,12 +28,15 @@ from Queue import Queue
 import serial
 import subprocess
 import tempfile
-
 import socket
 
 import wx
 
-import argparse
+sys.path.append(os.path.join(os.path.dirname(__file__), "Printrun"))
+
+from printrun import gcoder
+from printrun import gcview
+from printrun.libtatlin import actors
 
 serial_baudrate = 115200
 socket_host = "127.0.0.1"
