@@ -126,8 +126,8 @@ class PrinterSimulator(object):
         self.process_thread.start()
 
     def stop(self):
-        self.stop_threads = True
         self.command_buffer.put(None)
+        self.stop_threads = True
         if self.read_thread:
             self.read_thread.join()
             self.read_thread = None
@@ -231,7 +231,7 @@ class PrinterSimulator(object):
             self.gline_cb(gline)
 
     def processor(self):
-        while not self.stop_threads:
+        while not self.stop_threads or not self.command_buffer.empty():
             gline = self.command_buffer.get()
             if gline == None:
                 self.command_buffer.task_done()
@@ -347,11 +347,10 @@ frame = gcview.GcodeViewFrame(None, wx.ID_ANY, '3D printer simulator', size = (4
 frame.Show(True)
 simulator.start(frame)
 app.MainLoop()
-app.Destroy()
 
 simulator.stop()
 
+app.Destroy()
+
 if use_serial:
     socat_p.terminate()
-else:
-    pass
