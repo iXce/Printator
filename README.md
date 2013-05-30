@@ -48,9 +48,9 @@ realistically waiting) using the `-f` option.
 
 # Planned features
 
-- Showing the nozzle position
-- Working networking support
-- Checksum/line number verification
-- Computing an STL file from the print results
-- Temperature support
-- Multi extruder support
+- [ ] Showing the nozzle position
+- [X] Working networking support
+- [ ] Checksum/line number verification
+- [ ] Computing an STL file from the print results
+- [ ] Temperature support
+- [ ] Multi extruder support
