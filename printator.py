@@ -21,6 +21,7 @@ import argparse
 import time
 import traceback
 import math
+import numpy
 
 import threading
 from Queue import Queue
@@ -47,6 +48,7 @@ build_dimensions = [200, 200, 100, 0, 0, 0, 0, 0, 0]
 parser = argparse.ArgumentParser(description = "3D printer simulator", add_help = False)
 parser.add_argument('--help', help = "Show this help message and quit", action = "store_true")
 parser.add_argument('-f', '--fast', help = "Process commands without reallistically waiting", action = "store_true")
+parser.add_argument('--speed', type = float, help = "Speed factor (> 1.0 is faster)", default = 1.0)
 parser.add_argument('-d', '--debug', help = "Display debug messages", action = "store_true")
 parser.add_argument('-s', '--serial', help = "Simulator serial port")
 parser.add_argument('-n', '--network', help = "Use networking instead of serial communications", action = "store_true")
@@ -60,6 +62,29 @@ use_serial = not args.network
 debug_mode = args.debug
 fast_mode = args.fast
 serial_port = args.serial
+speed_factor = max(args.speed, 0.001)
+
+class MoveUpdater(threading.Thread):
+    def __init__(self, parent, gline, totalduration, orig, vec):
+        super(MoveUpdater, self).__init__()
+        self.parent = parent
+        self.gline = gline
+        self.totalduration = totalduration
+        self.orig = numpy.array(orig)
+        self.vec = numpy.array(vec)
+
+    def run(self):
+        starttime = time.time()
+        timestep = 0.1
+        orig = self.orig
+        vec = self.vec
+        wx.CallAfter(self.parent.add_glmove, self.gline, *(list(orig) + list(orig)))
+        while True:
+            prop = (time.time() - starttime) / self.totalduration
+            if prop > 0.99: break
+            wx.CallAfter(self.parent.update_glmove, self.gline, *list(orig + prop * vec))
+            time.sleep(timestep)
+        wx.CallAfter(self.parent.update_glmove, self.gline, *list(orig + vec))
 
 class PrinterSimulator(object):
 
@@ -126,12 +151,14 @@ class PrinterSimulator(object):
         if z != self.cur_z:
             distance = abs(self.cur_z - z)
             moveduration += distance / f
-        return moveduration
+        return moveduration / speed_factor
 
     def process_gline_nong(self, gline):
         # These unbuffered commands must be acked manually
         if gline.command == "M114":
             self.write("ok X:%.02fY:%.02fZ:%.02fE:%.02f Count:" % (self.cur_x, self.cur_y, self.cur_z, self.cur_e))
+        elif gline.command == "M105":
+            self.write("ok T:100.0/225.0 B:98.0/110.0 T0:228.0/220.0 T1:150.0/185")
         else:
             self.write("ok")
         if self.gline_cb:
@@ -141,6 +168,7 @@ class PrinterSimulator(object):
         if not gline.command.startswith("G"): # unbuffered
             return self.process_gline_nong(gline)
         line_duration = 0
+        timer = None
         if gline.is_move:
             new_x = self.cur_x
             new_y = self.cur_y
@@ -166,7 +194,11 @@ class PrinterSimulator(object):
 
             line_duration = self.compute_duration(new_x, new_y, new_z, new_f)
 
-            wx.CallAfter(self.add_glmove, gline, self.cur_x, self.cur_y, self.cur_z, new_x, new_y, new_z)
+            if not fast_mode and line_duration > 0.5:
+                vec = (new_x - self.cur_x, new_y - self.cur_y, new_z - self.cur_z)
+                timer = MoveUpdater(self, gline, line_duration, (self.cur_x, self.cur_y, self.cur_z), vec)
+            else:
+                wx.CallAfter(self.add_glmove, gline, self.cur_x, self.cur_y, self.cur_z, new_x, new_y, new_z)
             self.cur_x = new_x
             self.cur_y = new_y
             self.cur_z = new_z
@@ -192,7 +224,9 @@ class PrinterSimulator(object):
             wx.CallAfter(self.move_head, gline, self.cur_x, self.cur_y, self.cur_z)
         if not fast_mode and line_duration and line_duration > 0:
             self.log("sleeping for %ss" % line_duration)
+            if timer: timer.start()
             time.sleep(line_duration)
+            if timer: timer.join()
         if self.gline_cb:
             self.gline_cb(gline)
 
@@ -281,6 +315,11 @@ class PrinterSimulator(object):
         self.glmodel.colors[self.glmodel.nvertices + 1] = color
         self.glmodel.nvertices += 2
         self.glmodel.layer_stops[-1] = self.glmodel.nvertices
+        self.glmodel.initialized = False
+        self.move_head(gline, cur_x, cur_y, cur_z)
+
+    def update_glmove(self, gline, cur_x, cur_y, cur_z):
+        self.glmodel.vertices[self.glmodel.nvertices - 1] = (cur_x, cur_y, cur_z)
         self.glmodel.initialized = False
         self.move_head(gline, cur_x, cur_y, cur_z)
 

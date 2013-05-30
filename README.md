@@ -43,14 +43,11 @@ realistically waiting) using the `-f` option.
 
 # Known issues
 
-- Only serial-based communications at standard baudrates are supported. Support
-  for TCP-based communications will be added in the future.
+- Custom baudrates are not supported for serial-based communications. TCP
+  support shouldn't have any speed limit, though.
 
 # Planned features
 
-- [ ] Showing the nozzle position
-- [X] Working networking support
-- [ ] Checksum/line number verification
-- [ ] Computing an STL file from the print results
-- [ ] Temperature support
-- [ ] Multi extruder support
+- Checksum/line number verification
+- Computing an STL file from the print results
+- Temperature support
