@@ -93,6 +93,7 @@ class PrinterSimulator(object):
         self.gcoder = gcoder.GCode([])
         self.glframe = frame
         self.init_glmodel()
+        self.init_glhead()
         self.stop_threads = False
         self.read_thread = threading.Thread(target = self.reader)
         self.read_thread.start()
@@ -182,11 +183,13 @@ class PrinterSimulator(object):
             self.cur_x = new_x
             self.cur_y = new_y
             self.cur_z = new_z
+            wx.CallAfter(self.move_head, gline, self.cur_x, self.cur_y, self.cur_z)
         elif gline.command == "G92":
             if gline.x: self.cur_x = gline.x
             if gline.y: self.cur_y = gline.y
             if gline.z: self.cur_z = gline.z
             if gline.e: self.cur_e = gline.e
+            wx.CallAfter(self.move_head, gline, self.cur_x, self.cur_y, self.cur_z)
         if not fast_mode and line_duration and line_duration > 0:
             self.log("sleeping for %ss" % line_duration)
             time.sleep(line_duration)
@@ -255,6 +258,17 @@ class PrinterSimulator(object):
         self.glmodel.initialized = False
         self.glframe.objects[-1].model = self.glmodel
         self.refresh_timer = wx.CallLater(100, self.glframe.Refresh)
+    
+    def init_glhead(self):
+        self.printhead = gcview.GCObject(actors.PrintHead())
+        self.glframe.objects.insert(1, self.printhead)
+
+    def move_head(self, gline, cur_x, cur_y, cur_z):
+        self.printhead.offsets[0] = cur_x
+        self.printhead.offsets[1] = cur_y
+        self.printhead.offsets[2] = cur_z
+        if not self.refresh_timer.IsRunning():
+            self.refresh_timer.Start()
 
     def add_glmove(self, gline, prev_x, prev_y, prev_z, cur_x, cur_y, cur_z):
         if self.glmodel.nvertices + 2 > len(self.glmodel.vertices):
@@ -268,8 +282,7 @@ class PrinterSimulator(object):
         self.glmodel.nvertices += 2
         self.glmodel.layer_stops[-1] = self.glmodel.nvertices
         self.glmodel.initialized = False
-        if not self.refresh_timer.IsRunning():
-            self.refresh_timer.Start()
+        self.move_head(gline, cur_x, cur_y, cur_z)
 
 if use_serial:
     privend = tempfile.mktemp(prefix = "simpriv_", dir = os.getcwd())
