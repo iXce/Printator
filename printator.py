@@ -217,10 +217,10 @@ class PrinterSimulator(object):
             self.cur_z = new_z
             wx.CallAfter(self.move_head, gline, self.cur_x, self.cur_y, self.cur_z)
         elif gline.command == "G92":
-            if gline.x: self.cur_x = gline.x
-            if gline.y: self.cur_y = gline.y
-            if gline.z: self.cur_z = gline.z
-            if gline.e: self.cur_e = gline.e
+            if gline.x is not None: self.cur_x = gline.x
+            if gline.y is not None: self.cur_y = gline.y
+            if gline.z is not None: self.cur_z = gline.z
+            if gline.e is not None: self.cur_e = gline.e
             wx.CallAfter(self.move_head, gline, self.cur_x, self.cur_y, self.cur_z)
         if not fast_mode and line_duration and line_duration > 0:
             self.log("sleeping for %ss" % line_duration)
