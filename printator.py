@@ -245,8 +245,11 @@ class PrinterSimulator(object):
 
     def write(self, data):
         if self.debug: print ">>>", data
-        self.port.write(data + "\n")
-        self.port.flush()
+        try:
+            self.port.write(data + "\n")
+            self.port.flush()
+        except socket.error:
+            pass # Don't do anything : reader thread will pick it up
 
     def reader(self):
         print "Simulator listening on %s" % self.path
@@ -263,6 +266,8 @@ class PrinterSimulator(object):
                 line = self.port.readline()
             except socket.timeout:
                 continue
+            except socket.error:
+                line = ""
             if self.server and not line: # empty line returned from the socket: this is EOF
                 print "Lost connection from %s:%s" % self.remote_addr
                 self.port = None
