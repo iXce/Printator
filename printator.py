@@ -205,7 +205,7 @@ class PrinterSimulator(object):
             self.cur_e = new_e
             self.cur_f = new_f
         elif gline.command == "G4":
-            line_duration = gline.p
+            line_duration = gcoder.P(gline)
         elif gline.command == "G28":
             new_x = 0 if "X" in gline.raw else self.cur_x
             new_y = 0 if "Y" in gline.raw else self.cur_y
@@ -292,6 +292,7 @@ class PrinterSimulator(object):
         self.glmodel.load_data(self.gcoder)
         self.glmodel.nvertices = 0
         self.glmodel.layer_stops[-1] = self.glmodel.nvertices
+        self.glmodel.num_layers_to_draw = self.glmodel.max_layers + 1
         self.glmodel.use_vbos = False
         self.glmodel.loaded = True
         self.glmodel.initialized = False
