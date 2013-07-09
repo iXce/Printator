@@ -37,7 +37,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Printrun"))
 
 from printrun import gcoder
 from printrun import gcview
-from printrun.libtatlin import actors
+from printrun.gl.libtatlin import actors
 
 com_timeout = 0.25
 serial_baudrate = 115200
