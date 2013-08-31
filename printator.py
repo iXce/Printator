@@ -110,6 +110,7 @@ class PrinterSimulator(object):
         self.server = server
         self.command_buffer = Queue(20 if not fast_mode else 400)
         self.glframe = None
+        self.sd_upload = False
 
     def log(self, message):
         if self.debug: print "???", message
@@ -158,7 +159,16 @@ class PrinterSimulator(object):
         if gline.command == "M114":
             self.write("ok X:%.02fY:%.02fZ:%.02fE:%.02f Count:" % (self.cur_x, self.cur_y, self.cur_z, self.cur_e))
         elif gline.command == "M105":
-            self.write("ok T:100.0/225.0 B:98.0/110.0 T0:228.0/220.0 T1:150.0/185")
+            self.write("ok T:100.0/225.0 B:98.0 /110.0 T0:228.0/220.0 T1:150.0/185")
+        elif gline.command == "M190":
+            time.sleep(10)
+            self.write("ok")
+        elif gline.command == "M28":
+            self.sd_upload = True
+            self.write("ok Writing to file")
+        elif gline.command == "M29":
+            self.sd_upload = False
+            self.write("ok")
         else:
             self.write("ok")
         if self.gline_cb:
@@ -167,6 +177,8 @@ class PrinterSimulator(object):
     def process_gline(self, gline):
         if not gline.command.startswith("G"): # unbuffered
             return self.process_gline_nong(gline)
+        if self.sd_upload:
+            return
         line_duration = 0
         timer = None
         if gline.is_move:
@@ -350,6 +362,7 @@ else:
 
 app = wx.App(redirect = False)
 frame = gcview.GcodeViewFrame(None, wx.ID_ANY, '3D printer simulator', size = (400, 400), build_dimensions = build_dimensions)
+frame.Bind(wx.EVT_CLOSE, lambda event: frame.Destroy())
 frame.Show(True)
 simulator.start(frame)
 app.MainLoop()
