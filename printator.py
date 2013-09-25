@@ -94,7 +94,7 @@ class PrinterSimulator(object):
     cur_e = 0
     cur_f = 0
 
-    acceleration = 1500.0 #mm/s/s  ASSUMING THE DEFAULT FROM SPRINTER !!!!
+    acceleration = 1500.0  # mm/s/s  ASSUMING THE DEFAULT FROM SPRINTER !!!!
     xy_homing_feedrate = 50.
     z_homing_feedrate = 4.
 
@@ -144,9 +144,9 @@ class PrinterSimulator(object):
                 # Unsure about this formula -- iXce reviewing this code
                 moveduration = 2 * distance / (self.cur_f + f)
                 currenttravel -= distance
-                moveduration += currenttravel/f
+                moveduration += currenttravel / f
             else:
-                moveduration = math.sqrt(2 * distance / self.acceleration) # probably buggy : not taking actual travel into account
+                moveduration = math.sqrt(2 * distance / self.acceleration)  # probably buggy : not taking actual travel into account
         else:
             moveduration = 0
         if z != self.cur_z:
@@ -175,7 +175,7 @@ class PrinterSimulator(object):
             self.gline_cb(gline)
 
     def process_gline(self, gline):
-        if not gline.command.startswith("G"): # unbuffered
+        if not gline.command.startswith("G"):  # unbuffered
             return self.process_gline_nong(gline)
         if self.sd_upload:
             return
@@ -245,7 +245,7 @@ class PrinterSimulator(object):
     def processor(self):
         while not self.stop_threads or not self.command_buffer.empty():
             gline = self.command_buffer.get()
-            if gline == None:
+            if gline is None:
                 self.command_buffer.task_done()
                 return
             try:
@@ -261,7 +261,7 @@ class PrinterSimulator(object):
             self.port.write(data + "\n")
             self.port.flush()
         except socket.error:
-            pass # Don't do anything : reader thread will pick it up
+            pass  # Don't do anything : reader thread will pick it up
 
     def reader(self):
         print "Simulator listening on %s" % self.path
@@ -280,7 +280,7 @@ class PrinterSimulator(object):
                 continue
             except socket.error:
                 line = ""
-            if self.server and not line: # empty line returned from the socket: this is EOF
+            if self.server and not line:  # empty line returned from the socket: this is EOF
                 print "Lost connection from %s:%s" % self.remote_addr
                 self.port = None
                 continue
@@ -289,15 +289,14 @@ class PrinterSimulator(object):
                 continue
             if self.debug: print "<<<", line
             gline = self.gcoder.append(line)
-            if not gline.command.startswith("G"): # unbuffered (okai, all G-commands are not buffered, but that's a light move from reality)
+            if not gline.command.startswith("G"):  # unbuffered (okai, all G-commands are not buffered, but that's a light move from reality)
                 while not self.command_buffer.empty():
                     time.sleep(0.05)
                 self.command_buffer.put(gline)
                 while not self.command_buffer.empty():
                     time.sleep(0.05)
-            else: # buffered
+            else:  # buffered
                 self.command_buffer.put(gline)
-                self.write("ok")
 
     def init_glmodel(self):
         self.glmodel = actors.GcodeModel()
@@ -310,7 +309,7 @@ class PrinterSimulator(object):
         self.glmodel.initialized = False
         self.glframe.objects[-1].model = self.glmodel
         self.refresh_timer = wx.CallLater(100, self.glframe.Refresh)
-    
+
     def init_glhead(self):
         self.printhead = gcview.GCObject(actors.PrintHead())
         self.glframe.objects.insert(1, self.printhead)
@@ -347,7 +346,7 @@ if use_serial:
         pubend = serial_port
     else:
         pubend = tempfile.mktemp(prefix = "printer_", dir = os.getcwd())
-    socat_p = subprocess.Popen(["socat","PTY,link=%s" % privend, "PTY,link=%s" % pubend])
+    socat_p = subprocess.Popen(["socat", "PTY,link=%s" % privend, "PTY,link=%s" % pubend])
     while not os.path.exists(privend) or not os.path.exists(pubend):
         time.sleep(0.1)
     sport = serial.Serial(privend, baudrate = serial_baudrate, timeout = com_timeout)
