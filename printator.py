@@ -288,15 +288,19 @@ class PrinterSimulator(object):
             if not line:
                 continue
             if self.debug: print "<<<", line
-            gline = self.gcoder.append(line)
-            if not gline.command.startswith("G"): # unbuffered (okai, all G-commands are not buffered, but that's a light move from reality)
-                while not self.command_buffer.empty():
-                    time.sleep(0.05)
-                self.command_buffer.put(gline)
-                while not self.command_buffer.empty():
-                    time.sleep(0.05)
-            else: # buffered
-                self.command_buffer.put(gline)
+            try:
+                gline = self.gcoder.append(line)
+                if not gline.command.startswith("G"): # unbuffered (okai, all G-commands are not buffered, but that's a light move from reality)
+                    while not self.command_buffer.empty():
+                        time.sleep(0.05)
+                    self.command_buffer.put(gline)
+                    while not self.command_buffer.empty():
+                        time.sleep(0.05)
+                else: # buffered
+                    self.command_buffer.put(gline)
+                    self.write("ok")
+            except ValueError:
+                # Failed to parse the G-Code, probably a custom command
                 self.write("ok")
 
     def init_glmodel(self):
