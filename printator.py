@@ -33,7 +33,7 @@ import socket
 
 import wx
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "Printrun"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "Printrun"))
 
 from printrun import gcoder
 from printrun import gcview
