@@ -304,7 +304,7 @@ class PrinterSimulator(object):
                 self.write("ok")
 
     def init_glmodel(self):
-        self.glmodel = actors.GcodeModel()
+        self.glmodel = actors.GcodeModelLight()
         self.glmodel.load_data(self.gcoder)
         self.glmodel.nvertices = 0
         self.glmodel.layer_stops[-1] = self.glmodel.nvertices
