@@ -160,6 +160,8 @@ class PrinterSimulator(object):
             self.write("ok X:%.02fY:%.02fZ:%.02fE:%.02f Count:" % (self.cur_x, self.cur_y, self.cur_z, self.cur_e))
         elif gline.command == "M105":
             self.write("ok T:100.0/225.0 B:98.0 /110.0 T0:228.0/220.0 T1:150.0/185")
+        elif gline.command == "M115":
+            self.write("ok PROTOCOL_VERSION:0.1 FIRMWARE_NAME:FiveD FIRMWARE_URL:http%3A//reprap.org MACHINE_TYPE:Mendel EXTRUDER_COUNT:3")
         elif gline.command == "M190":
             time.sleep(10)
             self.write("ok")
