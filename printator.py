@@ -35,6 +35,7 @@ import wx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "Printrun"))
 
+from printrun import gui  # NOQA
 from printrun import gcoder
 from printrun import gcview
 from printrun.gl.libtatlin import actors
