@@ -308,7 +308,10 @@ class PrinterSimulator(object):
 
     def init_glmodel(self):
         self.glmodel = actors.GcodeModelLight()
-        self.glmodel.load_data(self.gcoder)
+        generator = self.glmodel.load_data(self.gcoder)
+        generator_output = generator.next()
+        while generator_output is not None:
+            generator_output = generator.next()
         self.glmodel.nvertices = 0
         self.glmodel.layer_stops[-1] = self.glmodel.nvertices
         self.glmodel.num_layers_to_draw = self.glmodel.max_layers + 1
