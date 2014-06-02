@@ -92,7 +92,7 @@ class PrinterSimulator(object):
     cur_y = 0
     cur_z = 0
     cur_e = 0
-    cur_f = 0
+    cur_f = 100
 
     acceleration = 1500.0  # mm/s/s  ASSUMING THE DEFAULT FROM SPRINTER !!!!
     xy_homing_feedrate = 50.
