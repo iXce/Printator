@@ -75,7 +75,7 @@ class MoveUpdater(threading.Thread):
 
     def run(self):
         starttime = time.time()
-        timestep = 0.1
+        timestep = 0.05
         orig = self.orig
         vec = self.vec
         wx.CallAfter(self.parent.add_glmove, self.gline, *(list(orig) + list(orig)))
